@@ -1,19 +1,37 @@
+import Notification from '../schemas/Notification';
 import User from '../models/User';
-import File from '../models/File';
 
 class NotificationController {
-  async index(req,res) {
-    const providers = await User.findAll({
-      where: { provider: true },
-      attributes: ['id', 'name', 'email', 'avatar_id'],
-      include: [{
-        model: File,
-        as: 'avatar',
-        attributes: ['name','path','url']
-      }]
-    })
+  async index(req, res) {
+    /* check if provider_id is a provider  */
+    const checkIsProvider = await User.findOne({
+      where: { id: req.userId, provider: true },
+    });
 
-    return res.json(providers);
+    if (!checkIsProvider) {
+      return res
+        .status(401)
+        .json({ error: 'Only provider can load notifications' });
+    }
+
+    const notifications = await Notification.find({
+      user: req.userId,
+    })
+      .sort({ createAt: 'desc' })
+      .limit(20);
+    return res.json(notifications);
+  }
+
+  async update(req, res) {
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      {
+        read: true,
+      },
+      { new: true }
+    );
+
+    return res.json(notification);
   }
 }
 
